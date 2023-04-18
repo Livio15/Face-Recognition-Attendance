@@ -1,12 +1,12 @@
 # Thư viện cần cài đặt:
 	- dlib
 	- numpy
-  - flask
-  - flask_socketio
-  - pillow
-  - sklearn
-  - face_recognition
-  - opencv-python
+	- flask
+	- flask_socketio
+	- pillow
+	- sklearn
+	- face_recognition
+	- opencv-python
   
 	
 # Cách chạy:
