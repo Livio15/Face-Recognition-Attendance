@@ -1,0 +1,62 @@
+{% extends "base.jinja" %}
+
+
+{% block style %}
+<style>
+  body {
+    overflow: hidden;
+  }
+
+  .header {
+    height: 8%;
+    width: 100%;
+    background: #242443;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 0.5rem;
+  }
+
+  .body {
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .tab {
+    height: 100%;
+    text-decoration: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+
+    padding: 0 0.5rem;
+  }
+
+  .tab.active {
+    color: #242443;
+    border-radius: 0.25rem;
+    background: white;
+  }
+</style>
+{% endblock style %}
+
+{% block body%}
+
+<body>
+  <div class="header">
+    <a class="tab {{'active' if route == 'employee' }}" href="/admin/employees">
+      <div>Nhân viên</div>
+    </a>
+    <a class="tab {{'active' if route == 'attendance' }}" href="/admin/attendances">
+      <div>Danh sách điểm danh</div>
+    </a>
+  </div>
+  {% block bodyContent %}
+
+  {% endblock bodyContent %}
+</body>
+{% endblock %}

@@ -1,0 +1,305 @@
+{% extends 'admin/base.jinja' %}
+
+{% block title %}
+Nhân viên
+{% endblock title %}
+
+{% block style %}
+{{ super() }}
+<style>
+  .calendar>.nav {
+    align-items: center;
+    text-align: center;
+  }
+
+  #date-range {
+    margin: 0;
+  }
+
+  .nav-btn:hover {
+    cursor: pointer;
+    background: gray;
+  }
+
+  .calendar>div {
+    display: flex;
+    justify-content: space-evenly;
+  }
+
+  .calendar>div>div {
+    padding: 12px;
+  }
+
+  .calendar>.calendar-header>div {
+    flex: 1 0 120px;
+    border-right: 1px solid #e6e6e6;
+  }
+
+  .fas:focus {
+    outline: none;
+    opacity: 1;
+  }
+
+  .calendar-header .date-container.current {
+    background: lightgreen;
+  }
+
+  .calendar-header .date-container.selected {
+    background: lightblue;
+  }
+
+  .body {
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 84%;
+  }
+
+  .footer {
+    height: 8%;
+    width: 100%;
+    background: #242443;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    position: absolute;
+    bottom: 0;
+  }
+</style>
+{% endblock %}
+
+{% block bodyContent %}
+<div class="body">
+  <div class="row">
+    <div class="col-sm-12">
+      <div class="calendar">
+        <div class="nav row">
+          <div id="prev" class="col-2 nav-btn">
+            <h1><i class="fa fa-chevron-left" tabindex="0"></i></h1>
+          </div>
+          <div class="col-8">
+            <h1 id="date-range"></h1>
+          </div>
+          <div id="next" class="col-2 nav-btn">
+            <h1><i class="fa fa-chevron-right" tabindex="0"></i></h1>
+          </div>
+        </div>
+        <div id="header" class="calendar-header">
+          <div class="date-container">
+            <div>Monday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Tuesday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Wednesday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Thursday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Friday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Saturday</div>
+            <div class="date"></div>
+          </div>
+          <div class="date-container">
+            <div>Sunday</div>
+            <div class="date"></div>
+          </div>
+        </div>
+      </div>
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Họ và tên</th>
+            <th>Điện thoại</th>
+            <th>Ca</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Điểm danh</th>
+          </tr>
+        </thead>
+        <tbody id="attendances-list">
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="btn-group" role="group">
+    <button class="btn btn-success" onclick="downloadCSV()">Tải về csv</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+  var socket = io("http://localhost:5000");
+
+  socket.on("connect", () => {
+    console.log("Connected...!", socket.connected);
+  });
+
+  var csvString = ""
+  var selDate = moment();
+
+  socket.on("attendances_list", (data) => {
+    var attendancesList = document.getElementById('attendances-list')
+    attendancesList.innerHTML = ''
+    csvString = convertToCSV(data)
+    data.forEach((employee) => {
+      var tr = document.createElement('tr')
+      var check = 0
+      var keys = ['fullname', 'phonenumber', 'shift', 'checkintime', 'checkouttime', 'check']
+      keys.forEach((key) => {
+        var td = document.createElement('td')
+
+        if (key == 'checkintime' || key == 'checkouttime') {
+          if (employee[key]) {
+            check += 1
+          }
+
+          td.innerHTML = employee[key] || 'Chưa check'
+          tr.appendChild(td)
+          return
+        }
+
+        if (key == 'check') {
+          if (check == 0) {
+            td.innerHTML = "Không đi làm"
+            td.classList.add('text-danger')
+          }
+          if (check == 1) {
+            td.innerHTML = "Chưa checkout"
+            td.classList.add('text-warning')
+          }
+          if (check == 2) {
+            td.innerHTML = "Checkin/out đủ"
+            td.classList.add('text-success')
+          }
+
+          tr.appendChild(td)
+          return
+        }
+
+        td.innerHTML = employee[key]
+        tr.appendChild(td)
+      })
+
+      attendancesList.appendChild(tr)
+    })
+  });
+
+  const range = (start, stop, step) => {
+    return Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step))
+  }
+
+  (function () {
+    moment.locale('vi')
+    var mondayRef = 1;
+    var sundayRef = 7;
+
+    var prev = document.getElementById('prev');
+    var next = document.getElementById('next');
+    var dateRange = document.getElementById('date-range');
+    var dateViews = document.getElementsByClassName('date');
+    var dateContainers = document.getElementsByClassName('date-container')
+    var calendarPopover = document.getElementById('calendar-popover');
+
+    [...dateContainers].forEach((dateContainer, idx) => {
+      dateContainer.onclick = () => {
+        selDate = moment().day(range(mondayRef, sundayRef, 1)[idx])
+        adjustCalendar(mondayRef, sundayRef)
+        socket.emit('get_attendances', selDate.format('YYYY-MM-DD'))
+      }
+    })
+
+
+    function adjustCalendar(monRef, sunRef) {
+      var monday = moment().day(monRef);
+      var sunday = moment().day(sunRef);
+
+      [...dateContainers].forEach((dateContainer) => {
+        dateContainer.setAttribute('class', 'date-container')
+      })
+
+      if (monRef > 0) {
+        for (var date = monRef; date <= sunRef; date++) {
+          dateViews[(date - 1) % 7].innerHTML = moment().day(date).format('D[/]M');
+          if (moment().isSame(moment().day(date), 'date')) {
+            dateContainers[(date - 1) % 7].classList.add('current')
+          }
+
+          if (moment().day(date).isSame(selDate, 'date')) {
+            dateContainers[(date - 1) % 7].classList.add('selected')
+          }
+        }
+      } else {
+        for (var date = -monRef; date >= -sunRef; date--) {
+          dateViews[-(monRef + date)].innerHTML = moment().day(-date).format('D[/]M');
+
+          if (moment().isSame(moment().day(-date), 'date')) {
+            dateContainers[(date - 1) % 7].classList.add('current')
+          }
+
+          if (moment().day(-date).isSame(selDate, 'date')) {
+            dateContainers[-(monRef + date)].classList.add('selected')
+          }
+        }
+      }
+
+
+
+      if (monday.format('YYYY') !== sunday.format('YYYY')) {
+        dateRange.innerHTML = `${monday.format('Do MMMM, YYYY')} - ${sunday.format('Do MMMM, YYYY')}`;
+      } else {
+        dateRange.innerHTML = `${monday.format('Do MMMM')} - ${sunday.format('Do MMMM, YYYY')}`;
+      }
+    }
+
+    // Init
+    adjustCalendar(mondayRef, sundayRef);
+
+    next.onclick = function () {
+      mondayRef += 7;
+      sundayRef += 7;
+      adjustCalendar(mondayRef, sundayRef);
+    }
+
+    prev.onclick = function () {
+      mondayRef -= 7;
+      sundayRef -= 7;
+      adjustCalendar(mondayRef, sundayRef);
+    }
+
+    socket.emit('get_attendances', moment().format('YYYY-MM-DD'))
+  })()
+
+  function convertToCSV(arr) {
+    const array = [Object.keys(arr[0])].concat(arr)
+
+    return array.map(it => {
+      return Object.values(it).toString()
+    }).join('\n')
+  }
+
+  function downloadCSV() {
+    var csv = document.createElement("a")
+    console.log(csvString)
+    csv.href = `data:text/csv,${encodeURI(csvString)}`
+    csv.download = `${selDate.format("YYYY-MM-DD")}.csv`
+    csv.click()
+  }
+</script>
+{% endblock script %}

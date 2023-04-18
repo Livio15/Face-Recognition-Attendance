@@ -1,0 +1,244 @@
+{% extends 'base.jinja '%}
+
+{% block title%}Điểm danh{% endblock %}
+
+{% block style %}
+<style>
+  .header {
+    width: 100%;
+    background: #242443;
+    padding: 0.5rem;
+
+    color: white;
+    text-align: center;
+
+    position: absolute;
+    top: 0;
+
+    transition: 0.5s;
+    clip-path: inset(0 0 0 0);
+  }
+
+  .header.hide {
+    clip-path: inset(0 0 100% 0);
+  }
+
+  .footer {
+    height: 8%;
+    width: 100%;
+    background: #242443;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    position: absolute;
+    bottom: 0;
+  }
+
+  .body {
+    height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #videoInput {
+    height: 100vh;
+    width: 100vw;
+    display: none;
+  }
+
+  #videoOutput {
+    height: 100vh;
+    width: 100vw;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+
+<body>
+  <div class="body">
+    <video id="videoInput"></video>
+    <canvas id="videoOutput" width="1920" height="1080"> </canvas>
+  </div>
+
+  <h3 class="header hide" id="statustext">
+
+  </h3>
+
+  <div class="footer">
+    <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+      <button type="button" class="btn btn-primary" onclick="begin_checks(0)">Check In</button>
+      <button type="button" class="btn btn-primary" onclick="begin_checks(1)">Check Out</button>
+    </div>
+  </div>
+
+  <div class="modal" tabindex="-1" id="confirmModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Xác nhận</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="confirmModalBody">
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Không phải</button>
+          <button type="button" class="btn btn-success" onclick="confirm_user()">Xác nhận</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+
+{% block script %}
+<script>
+  var socket = io("http://localhost:5000");
+
+  socket.on("connect", function () { });
+
+
+  const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'), {
+    keyboard: false
+  })
+  const confirmModalBody = document.getElementById("confirmModalBody");
+  const statustext = document.getElementById("statustext");
+  const video = document.getElementById("videoInput");
+  const canvas = document.getElementById("videoOutput");
+  const context = canvas.getContext("2d");
+
+  context.width = canvas.width;
+  context.height = canvas.height;
+
+  var faces = [];
+  var ids = []
+
+  if (navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices
+      .getUserMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      })
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+
+        let stream_settings = stream.getVideoTracks()[0].getSettings();
+        let ratio = stream_settings.width / stream_settings.height
+        context.width = canvas.width
+        context.height = canvas.width / ratio
+      })
+      .catch((err0r) => {
+        console.log(err0r);
+        console.log("Something went wrong!");
+      });
+  }
+
+  const FPS = 30;
+
+  setInterval(() => {
+    context.drawImage(video, 0, 0, context.width, context.height);
+  }, 1000 / FPS);
+
+  var frame_captures = [];
+  var is_capture = false;
+
+  var type = "image/jpeg";
+  var frame = "";
+
+  setInterval(() => {
+    if (is_capture) {
+      frame = canvas.toDataURL(type).replace("data:" + type + ";base64,", "")
+      socket.emit("checks", frame);
+      is_capture = false;
+    }
+  }, 300);
+
+  var fullname = ""
+  var uid = ""
+  socket.on("checks_done", (data) => {
+    var status = data['status']
+
+    if (status == 1) {
+      change_status_text(data['data'], 'danger')
+      is_capture = true
+      return
+    }
+
+    var cid = data['data']['cid']
+    fullname = data['data']['fullname']
+    uid = data['data']['id']
+
+    confirmModalBody.innerHTML = `Bạn có phải là <b>${data['data']['fullname']}</b> không?<br>CCCD/CMND: ${cid}`
+    confirmModal.show()
+
+    is_capture = false
+    change_status_text()
+  });
+
+  var check_type = 0
+  function begin_checks(type) {
+    is_capture = true
+    check_type = type
+    change_status_text("Đang nhận diện", "warning")
+  }
+
+  function change_status_text(text = '', color = '') {
+    statustext.classList.remove('bg-danger')
+    statustext.classList.remove('bg-success')
+    statustext.classList.remove('bg-warning')
+    statustext.classList.remove('hide')
+
+    statustext.innerHTML = text
+
+    if (!text) {
+      statustext.classList.add('hide')
+    }
+
+    if (color) {
+      statustext.classList.add(`bg-${color}`)
+      return
+    }
+  }
+
+  function confirm_user() {
+    confirmModal.hide()
+    socket.emit("checks_confirm", { id: uid, type: check_type })
+  }
+
+  socket.on("checks_complete", (data) => {
+    var status = data['status']
+    if (status == 1) {
+      change_status_text(`${data['data']}!`, 'danger')
+      setTimeout(() => {
+        change_status_text()
+      }, 3000)
+      return
+    }
+
+    var greet = ''
+    var wish = ''
+
+    if (check_type == 0) {
+      greet = 'Xin chào'
+      wish = 'chúc bạn ngày mới tốt lành'
+    }
+    if (check_type == 1) {
+      greet = 'Tạm biệt'
+      wish = 'cảm ơn những đóng góp của bạn'
+    }
+
+    change_status_text(`${greet} <b>${fullname}</b>, ${wish}!`, 'success')
+    setTimeout(() => {
+      change_status_text()
+    }, 3000)
+  })
+</script>
+{% endblock %}

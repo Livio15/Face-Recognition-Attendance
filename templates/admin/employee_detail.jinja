@@ -1,0 +1,77 @@
+<div class="row">
+  <div class="col-lg-12">
+    <div class="row">
+      <div class="col-md-12 mb-4">
+        <div class="form-outline">
+          <input type="text" id="fullName" name="fullName" class="form-control"
+            value="{% if 'fullName' in formRequest %}{{formRequest['fullName']}}{% endif %}" disabled />
+          <label class="form-label" for="firstName">Họ và tên</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-4 d-flex align-items-center">
+        <div class="form-outline datepicker w-100">
+          <input type="date" class="form-control" id="birthdayDate" name="birthdayDate"
+            value="{% if 'birthdayDate' in formRequest %}{{formRequest['birthdayDate']}}{% endif %}" disabled />
+          <label for="birthdayDate" class="form-label">Ngày sinh</label>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <h6 class="mb-2 pb-1">Giới tính</h6>
+
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="gender" id="maleGender" value="0" {% if
+            formRequest['gender']==0 %}checked{% endif %} disabled />
+          <label class="form-check-label" for="maleGender">Nam</label>
+        </div>
+
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="gender" id="femaleGender" value="1" {% if
+            formRequest['gender']==1 %}checked{% endif %} disabled />
+          <label class="form-check-label" for="femaleGender">Nữ</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-4 pb-2">
+        <div class="form-outline">
+          <input type="email" id="emailAddress" name="emailAddress" class="form-control"
+            value="{% if 'emailAddress' in formRequest %}{{formRequest['emailAddress']}}{% endif %}" disabled />
+          <label class="form-label" for="emailAddress">Email</label>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4 pb-2">
+        <div class="form-outline">
+          <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control"
+            value="{% if 'phoneNumber' in formRequest %}{{formRequest['phoneNumber']}}{% endif %}" disabled />
+          <label class="form-label" for="phoneNumber">Số điện thoại</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-4 pb-2">
+        <div class="form-outline">
+          <input type="text" id="cid" name="cid" class="form-control"
+            value="{% if 'cid' in formRequest %}{{formRequest['cid']}}{% endif %}" disabled />
+          <label class="form-label" for="cid">CCCD/CMND</label>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4 pb-2">
+        <div class="form-outline">
+          <select class="form-select" id="shift" name="shift" disabled>
+            <option value="0" disabled>Choose option</option>
+            {% for shift in shifts %}
+            <option value="{{shift['id']}}" {{'selected' if (shift['id']|string==formRequest['shift'])}}>
+              {{shift['name']}}</option>
+            {% endfor %}
+          </select>
+          <label class="form-label select-label" for="shift">Ca</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

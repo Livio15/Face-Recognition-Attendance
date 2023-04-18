@@ -1,0 +1,320 @@
+{% extends 'admin/base.jinja' %}
+
+{% block title %}
+Chỉnh sửa thông tin nhân viên
+{% endblock title %}
+
+{% block style %}
+{{ super() }}
+
+<style>
+  #videoInput {
+    height: 100%;
+    width: 100%;
+    display: none;
+  }
+
+  #videoOutput {
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: .375rem;
+    padding: 0;
+  }
+
+  .progress {
+    position: relative;
+    padding: 0;
+  }
+
+  #progresstext {
+    width: 100%;
+    position: absolute;
+    text-align: center;
+    justify-content: center;
+
+  }
+
+  #progressbar {
+    width: 100%;
+    clip-path: inset(0 100% 0 0);
+  }
+
+  #frames {
+    display: none;
+  }
+</style>
+{% endblock style %}
+
+
+{% block bodyContent %}
+<div class="body">
+  <div class="mt-4">
+    <div class="row m-0 p-0">
+      <div class="col-12">
+
+        <div class="p-4 p-md-5">
+          <h3 class="mb-4 pb-2 pb-md-0 mb-md-5">Chỉnh sửa thông tin nhân viên</h3>
+          <form method="post">
+            <div class="row">
+              <div class="col-lg-8">
+                <div class="row">
+                  <div class="col-md-12 mb-4">
+                    <div class="form-outline">
+                      <input type="text" id="fullName" name="fullName" class="form-control"
+                        value="{% if 'fullName' in formRequest %}{{formRequest['fullName']}}{% endif %}" />
+                      <label class="form-label" for="firstName">Họ và tên</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-4 d-flex align-items-center">
+                    <div class="form-outline datepicker w-100">
+                      <input type="date" class="form-control" id="birthdayDate" name="birthdayDate"
+                        value="{% if 'birthdayDate' in formRequest %}{{formRequest['birthdayDate']}}{% endif %}" />
+                      <label for="birthdayDate" class="form-label">Ngày sinh</label>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-4">
+                    <h6 class="mb-2 pb-1">Giới tính</h6>
+
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="gender" id="maleGender" value="0" {% if
+                        formRequest['gender']==0 %}checked{% endif %} />
+                      <label class="form-check-label" for="maleGender">Nam</label>
+                    </div>
+
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="gender" id="femaleGender" value="1" {% if
+                        formRequest['gender']==1 %}checked{% endif %} />
+                      <label class="form-check-label" for="femaleGender">Nữ</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-4 pb-2">
+                    <div class="form-outline">
+                      <input type="email" id="emailAddress" name="emailAddress" class="form-control"
+                        value="{% if 'emailAddress' in formRequest %}{{formRequest['emailAddress']}}{% endif %}" />
+                      <label class="form-label" for="emailAddress">Email</label>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-4 pb-2">
+                    <div class="form-outline">
+                      <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control"
+                        value="{% if 'phoneNumber' in formRequest %}{{formRequest['phoneNumber']}}{% endif %}" />
+                      <label class="form-label" for="phoneNumber">Số điện thoại</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-4 mb-4 pb-2">
+                    <div class="form-outline">
+                      <input type="text" id="cid" name="cid" class="form-control"
+                        value="{% if 'cid' in formRequest %}{{formRequest['cid']}}{% endif %}" />
+                      <label class="form-label" for="cid">CCCD/CMND</label>
+                    </div>
+                  </div>
+                  <div class="col-md-4 mb-4 pb-2">
+                    <div class="form-outline">
+                      <select class="form-select" id="shift" name="shift">
+                        <option value="0" disabled>Choose option</option>
+                        {% for shift in shifts %}
+                        <option value="{{shift['id']}}" {{'selected' if (shift['id']|string==formRequest['shift'])}}>
+                          {{shift['name']}}</option>
+                        {% endfor %}
+                      </select>
+                      <label class="form-label select-label" for="shift">Ca</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4 mb-4 pb-2">
+                    <div class="form-outline">
+                      <select class="form-select" id="status" name="status">
+                        <option value="1" {{'selected' if (formRequest['status'] == 1)}}>Còn làm việc</option>
+                        <option value="0" {{'selected' if (formRequest['status'] == 0)}}>Nghỉ việc</option>
+                      </select>
+                      <label class="form-label select-label" for="status">Trạng thái</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-4">
+                <div class="row mb-2">
+                  <video id="videoInput"></video>
+
+                  <canvas id="videoOutput" width="1920" height="1080"> </canvas>
+                  <input class="form-check-input" type="text" name="frames" id="frames"
+                    value="{% if 'frames' in formRequest %}{{formRequest['frames']}}{% endif %}" />
+                </div>
+
+                <div class="row mb-4">
+                  <div class="progress">
+                    <div class="progress-text" id="progresstext">Hãy nhấn cập nhật ảnh</div>
+                    <div class="progress-bar" id="progressbar">Hãy nhấn cập nhật ảnh</div>
+                  </div>
+                </div>
+
+                <div class="row mb-4"> <button class="btn btn-primary" type="button" onclick="begin_capture()">
+                    Cập nhật ảnh
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-2">
+              <input class="btn btn-success" type="submit" value="Chỉnh sửa" />
+              <input class="btn btn-danger" type="button" onclick="cancel()" value="Hủy" />
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock bodyContent %}
+
+{% block script %}
+{{ super() }}
+<script>
+  var socket = io("http://localhost:5000");
+
+  socket.on("connect", function () {
+    console.log("Connected...!", socket.connected);
+  });
+
+  const video = document.querySelector("#videoInput");
+  const canvas = document.getElementById("videoOutput");
+  const progressbar = document.getElementById("progressbar")
+  const progresstext = document.getElementById("progresstext")
+  const frames = document.getElementById("frames")
+  const context = canvas.getContext("2d");
+
+
+  if (frames.value.length > 0 && frames.value.includes(";")) {
+    if (frames.value.split(";").length == 20) {
+      change_progress_bar_text("20/20 hình")
+      change_progress_bar_color("success")
+      progressbar.style.clipPath = `inset(0 0 0 0)`
+    }
+  }
+
+  if (navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices
+      .getUserMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      })
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+
+        let stream_settings = stream.getVideoTracks()[0].getSettings();
+        let ratio = stream_settings.width / stream_settings.height
+        context.width = canvas.width
+        context.height = canvas.width / ratio
+      })
+      .catch((err0r) => {
+        console.log(err0r);
+        console.log("Something went wrong!");
+      });
+  }
+
+  const FPS = 30;
+
+  setInterval(() => {
+    context.drawImage(video, 0, 0, context.width, context.height);
+  }, 1000 / FPS);
+
+  var frame_captures = [];
+  var is_capture = false;
+
+  var type = "image/jpeg";
+  var frame = "";
+  setInterval(() => {
+    if (is_capture) {
+      frame = canvas.toDataURL(type).replace("data:" + type + ";base64,", "")
+      socket.emit("check_face", {
+        img: frame,
+      });
+      is_capture = false;
+    }
+  }, 300);
+
+  socket.on("check_done", function (status) {
+    if (status == "1") {
+      change_progress_bar_text("Không tìm thấy khuôn mặt")
+      change_progress_bar_color('danger')
+      is_capture = true;
+      return;
+    }
+
+    if (status == "2") {
+      change_progress_bar_text("Nhiều hơn 1 khuôn mặt")
+      change_progress_bar_color('danger')
+      is_capture = true;
+      return;
+    }
+
+    frame_captures.push(frame)
+    change_progress_bar_text(frame_captures.length + "/20 hình")
+    change_progress_bar_color()
+
+    progressbar.style.clipPath = `inset(0 ${100 - (frame_captures.length == 0 ? 0 : frame_captures.length / 0.2)}% 0 0)`;
+
+
+    if (frame_captures.length < 20) {
+      is_capture = true;
+    } else {
+      is_capture = false;
+      document.getElementById('frames').value = frame_captures.join(';');
+      frame_captures = []
+      change_progress_bar_color('success')
+    }
+  });
+
+  function begin_capture() {
+    frame_captures = [];
+    is_capture = true;
+    change_progress_bar_color()
+  }
+
+  function change_progress_bar_text(text) {
+    progressbar.innerHTML = text
+    progresstext.innerHTML = text
+  }
+
+  function change_progress_bar_color(color = '') {
+    progressbar.classList.remove('bg-danger')
+    progressbar.classList.remove('bg-success')
+    progresstext.classList.remove('text-primary')
+    progresstext.classList.remove('text-danger')
+    progresstext.classList.remove('text-success')
+
+    if (color == 'danger') {
+      progressbar.classList.add('bg-danger')
+      progresstext.classList.add('text-danger')
+      return
+    }
+
+    if (color == 'success') {
+      progressbar.classList.add('bg-success')
+      progresstext.classList.add('text-success')
+      return
+    }
+
+    progresstext.classList.add('text-primary')
+  }
+
+  function cancel() {
+    window.location.href = "/admin/employees"
+  }
+</script>
+{% endblock script %}
